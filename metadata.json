@@ -1,0 +1,7 @@
+{
+  "name": "MagicStudio AI",
+  "description": "Professional AI image transformer with Samsung-style subject selection and iterative editing.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
