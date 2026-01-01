@@ -4,7 +4,8 @@ import { GoogleGenAI } from "@google/genai";
 export async function processImageEditing(
   base64Image: string,
   prompt: string,
-  maskBase64?: string | null
+  maskBase64?: string | null,
+  referenceImageBase64?: string | null
 ): Promise<string> {
   const apiKey = process.env.API_KEY;
   if (!apiKey) throw new Error("API Key not found.");
@@ -21,13 +22,23 @@ export async function processImageEditing(
     { inlineData: mainImage }
   ];
 
+  let instruction = `Instruction: ${prompt}. `;
+
   if (maskBase64) {
     const maskImage = extractData(maskBase64);
     parts.push({ inlineData: maskImage });
-    parts.push({ text: `The first image is the original. The second image is a mask where white is the selection. Instruction: ${prompt}. Only modify the area indicated by the white mask. Make it look natural.` });
+    instruction += `The first image is the original. The second image is a mask where white is the selection. Only modify the area indicated by the white mask. `;
   } else {
-    parts.push({ text: `Instruction: ${prompt}. Automatically detect the subject and apply changes naturally.` });
+    instruction += `Automatically detect the subject and apply changes naturally. `;
   }
+
+  if (referenceImageBase64) {
+    const refImage = extractData(referenceImageBase64);
+    parts.push({ inlineData: refImage });
+    instruction += `Use the additional reference image provided as visual guidance/style/content for the modification. Ensure the result looks photorealistic and naturally integrated into the original scene. `;
+  }
+
+  parts.push({ text: instruction });
 
   try {
     const response = await ai.models.generateContent({

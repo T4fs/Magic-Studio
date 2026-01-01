@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
   Upload, Sparkles, History, Download, ChevronRight, Image as ImageIcon,
-  RefreshCw, ArrowRight, Plus, ArrowLeft, Eye, Wand2, Palette
+  RefreshCw, ArrowRight, Plus, ArrowLeft, Eye, Wand2, Palette, ImagePlus, X
 } from 'lucide-react';
 import DrawingCanvas from './components/DrawingCanvas';
 import { processImageEditing } from './services/geminiService';
@@ -19,6 +19,7 @@ const PRESETS = [
 const App: React.FC = () => {
   const [mode, setMode] = useState<EditorMode>(EditorMode.IDLE);
   const [originalImage, setOriginalImage] = useState<string | null>(null);
+  const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [selectionMask, setSelectionMask] = useState<string | null>(null);
   const [prompt, setPrompt] = useState('');
@@ -28,6 +29,7 @@ const App: React.FC = () => {
   const [isComparing, setIsComparing] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const referenceInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -37,6 +39,7 @@ const App: React.FC = () => {
         setOriginalImage(ev.target?.result as string);
         setMode(EditorMode.BRUSH);
         setResultImage(null);
+        setReferenceImage(null);
         setPrompt('');
         setSelectionMask(null);
       };
@@ -44,24 +47,44 @@ const App: React.FC = () => {
     }
   };
 
+  const handleReferenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setReferenceImage(ev.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleProcess = async (customPrompt?: string) => {
     const finalPrompt = customPrompt || prompt;
-    if (!originalImage || !finalPrompt.trim()) return;
+    if (!originalImage || (!finalPrompt.trim() && !referenceImage)) return;
     
     setMode(EditorMode.PROCESSING);
     setError(null);
     try {
-      const edited = await processImageEditing(originalImage, finalPrompt, selectionMask);
+      const edited = await processImageEditing(originalImage, finalPrompt || "Modify selection using reference image", selectionMask, referenceImage);
       setResultImage(edited);
       setMode(EditorMode.RESULT);
       setHistory(prev => [{
         id: crypto.randomUUID(), originalImage, editedImage: edited,
-        prompt: finalPrompt, timestamp: Date.now()
+        prompt: finalPrompt || "Reference Image Transformation", timestamp: Date.now()
       }, ...prev]);
     } catch (err: any) {
       setError(err.message || "Transformation failed.");
       setMode(EditorMode.BRUSH);
     }
+  };
+
+  const handleReset = () => {
+    setOriginalImage(null);
+    setReferenceImage(null);
+    setResultImage(null);
+    setSelectionMask(null);
+    setPrompt('');
+    setMode(EditorMode.IDLE);
   };
 
   return (
@@ -71,13 +94,13 @@ const App: React.FC = () => {
         <div className="flex items-center gap-4">
           <div 
             className="w-11 h-11 bg-zinc-900 rounded-2xl flex items-center justify-center text-white shadow-lg cursor-pointer hover:scale-105 active:scale-95 transition-all" 
-            onClick={() => setMode(EditorMode.IDLE)}
+            onClick={handleReset}
           >
             <Wand2 size={20} />
           </div>
           <div>
             <h1 className="text-lg font-black tracking-tight leading-none uppercase">Studio</h1>
-            <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Nano Banana Magic</p>
+            <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Multi-Modal Magic</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -89,7 +112,7 @@ const App: React.FC = () => {
           </button>
           {originalImage && (
             <button 
-              onClick={() => setMode(EditorMode.IDLE)} 
+              onClick={handleReset} 
               className="px-5 py-2.5 text-zinc-400 hover:text-zinc-900 font-bold text-xs uppercase tracking-widest"
             >
               Reset
@@ -118,7 +141,7 @@ const App: React.FC = () => {
         )}
 
         {mode === EditorMode.BRUSH && originalImage && (
-          <div className="w-full max-w-4xl flex flex-col gap-10 animate-in fade-in duration-700 pb-40">
+          <div className="w-full max-w-4xl flex flex-col gap-10 animate-in fade-in duration-700 pb-52">
             <div className="flex flex-col items-center gap-2">
               <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.3em]">Step 01</span>
               <h2 className="text-3xl font-black tracking-tight text-center">Circle the target</h2>
@@ -126,24 +149,49 @@ const App: React.FC = () => {
             
             <DrawingCanvas imageUrl={originalImage} onSelectionComplete={setSelectionMask} />
 
-            <div className="fixed bottom-10 left-1/2 -translate-x-1/2 w-full max-w-3xl px-6 z-[100]">
-              <div className="bg-white/80 backdrop-blur-3xl p-6 rounded-[2.5rem] border border-zinc-100 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.12)] flex flex-col gap-6">
+            <div className="fixed bottom-10 left-1/2 -translate-x-1/2 w-full max-w-4xl px-6 z-[100]">
+              <div className="bg-white/80 backdrop-blur-3xl p-6 rounded-[2.5rem] border border-zinc-100 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.12)] flex flex-col gap-5">
                 
-                {/* Presets Bar */}
-                <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                  <div className="flex items-center gap-2 px-3 border-r border-zinc-100 mr-2 text-zinc-400">
-                    <Palette size={14} />
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Styles</span>
+                {/* Reference & Presets Row */}
+                <div className="flex items-center gap-4 overflow-x-auto no-scrollbar">
+                  {/* Reference Image Slot */}
+                  <div className="flex-shrink-0">
+                    {referenceImage ? (
+                      <div className="relative w-16 h-16 rounded-2xl overflow-hidden border-2 border-zinc-900 shadow-lg group">
+                        <img src={referenceImage} className="w-full h-full object-cover" />
+                        <button 
+                          onClick={() => setReferenceImage(null)}
+                          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button 
+                        onClick={() => referenceInputRef.current?.click()}
+                        className="w-16 h-16 bg-zinc-50 border-2 border-dashed border-zinc-200 rounded-2xl flex flex-col items-center justify-center text-zinc-400 hover:border-zinc-400 hover:text-zinc-600 transition-all active:scale-95"
+                      >
+                        <ImagePlus size={20} />
+                        <span className="text-[8px] font-black uppercase tracking-tighter mt-1">Ref</span>
+                        <input type="file" ref={referenceInputRef} onChange={handleReferenceUpload} className="hidden" accept="image/*" />
+                      </button>
+                    )}
                   </div>
-                  {PRESETS.map(p => (
-                    <button 
-                      key={p.id}
-                      onClick={() => { setPrompt(p.prompt); handleProcess(p.prompt); }}
-                      className="whitespace-nowrap px-4 py-2 bg-zinc-50 hover:bg-zinc-900 hover:text-white border border-zinc-100 rounded-xl text-xs font-bold transition-all active:scale-95"
-                    >
-                      {p.label}
-                    </button>
-                  ))}
+
+                  <div className="h-10 w-[1px] bg-zinc-100 mx-1 flex-shrink-0" />
+
+                  {/* Presets Bar */}
+                  <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                    {PRESETS.map(p => (
+                      <button 
+                        key={p.id}
+                        onClick={() => { setPrompt(p.prompt); handleProcess(p.prompt); }}
+                        className="whitespace-nowrap px-4 py-2 bg-zinc-50 hover:bg-zinc-900 hover:text-white border border-zinc-100 rounded-xl text-xs font-bold transition-all active:scale-95"
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="flex flex-col md:flex-row gap-4">
@@ -151,13 +199,13 @@ const App: React.FC = () => {
                     type="text" 
                     value={prompt} 
                     onChange={(e) => setPrompt(e.target.value)} 
-                    placeholder="Describe the change..." 
+                    placeholder={referenceImage ? "Describe how to use the reference..." : "Describe the change..."} 
                     className="flex-1 bg-zinc-50 rounded-2xl px-6 py-4 font-bold text-lg focus:outline-none placeholder:text-zinc-300" 
                     onKeyDown={(e) => e.key === 'Enter' && handleProcess()}
                   />
                   <button 
                     onClick={() => handleProcess()} 
-                    disabled={!prompt.trim()}
+                    disabled={!prompt.trim() && !referenceImage}
                     className="px-10 py-4 bg-zinc-900 text-white rounded-2xl font-black shadow-xl flex items-center justify-center gap-3 disabled:opacity-20 transition-all hover:bg-black active:scale-95 group"
                   >
                     <Sparkles size={18} className="group-hover:animate-pulse" />
@@ -174,7 +222,7 @@ const App: React.FC = () => {
             <div className="relative w-36 h-36 rounded-full border-[8px] border-zinc-50 border-t-zinc-900 animate-spin" />
             <div className="text-center">
               <h2 className="text-4xl font-black tracking-tight mb-2">Creating...</h2>
-              <p className="text-zinc-400 font-bold uppercase tracking-[0.2em] text-[10px]">Analyzing selection & prompt</p>
+              <p className="text-zinc-400 font-bold uppercase tracking-[0.2em] text-[10px]">Processing Multi-Modal Inputs</p>
             </div>
           </div>
         )}
@@ -188,6 +236,7 @@ const App: React.FC = () => {
                 <button 
                   onMouseDown={() => setIsComparing(true)}
                   onMouseUp={() => setIsComparing(false)}
+                  onMouseLeave={() => setIsComparing(false)}
                   onTouchStart={() => setIsComparing(true)}
                   onTouchEnd={() => setIsComparing(false)}
                   className="p-4 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl text-zinc-900 active:scale-90 transition-all border border-zinc-100"
@@ -213,7 +262,7 @@ const App: React.FC = () => {
             <div className="w-full max-w-3xl bg-white p-10 rounded-[3rem] border border-zinc-100 shadow-xl flex flex-col items-center gap-8">
               <div className="text-center">
                 <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest">Transformation</span>
-                <p className="text-2xl font-black italic mt-2 text-zinc-800 leading-tight">"{prompt}"</p>
+                <p className="text-2xl font-black italic mt-2 text-zinc-800 leading-tight">"{prompt || 'Visual Reference Fusion'}"</p>
               </div>
               
               <div className="w-full grid md:grid-cols-2 gap-4">
@@ -225,7 +274,7 @@ const App: React.FC = () => {
                   Try Again
                 </button>
                 <button 
-                  onClick={() => {setOriginalImage(resultImage); setMode(EditorMode.BRUSH); setPrompt(''); setSelectionMask(null);}} 
+                  onClick={() => {setOriginalImage(resultImage); setMode(EditorMode.BRUSH); setPrompt(''); setSelectionMask(null); setReferenceImage(null);}} 
                   className="py-5 bg-zinc-900 hover:bg-black text-white rounded-[1.5rem] font-black flex items-center justify-center gap-3 shadow-xl transition-all active:scale-95"
                 >
                   Edit Result
@@ -285,7 +334,7 @@ const App: React.FC = () => {
 
       <footer className="h-14 flex items-center justify-center border-t border-zinc-100 bg-white">
           <p className="text-[9px] font-black uppercase tracking-[0.5em] text-zinc-300">
-            Professional AI Imagery &bull; Magic Studio
+            Multi-Modal AI Engine &bull; Magic Studio
           </p>
       </footer>
     </div>
