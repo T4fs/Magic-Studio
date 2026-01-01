@@ -1,6 +1,6 @@
 {
   "name": "MagicStudio AI",
-  "description": "Professional AI image transformer with Samsung-style subject selection and iterative editing.",
+  "description": "Completely free AI image transformer with magical subject selection and iterative editing.",
   "requestFramePermissions": [
     "camera"
   ]

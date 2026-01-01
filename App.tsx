@@ -1,20 +1,14 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
-  Upload, Sparkles, History, Download, ChevronRight, Image as ImageIcon,
-  RefreshCw, ArrowRight, Plus, ArrowLeft, Eye, Wand2, Palette, ImagePlus, X
+  Sparkles, History, Download, ChevronRight, Image as ImageIcon,
+  Plus, ArrowLeft, Eye, Wand2, ImagePlus, X,
+  RotateCcw, CheckCircle2, Upload, Maximize, MousePointer2, Settings,
+  LogOut, Info, Heart
 } from 'lucide-react';
 import DrawingCanvas from './components/DrawingCanvas';
 import { processImageEditing } from './services/geminiService';
 import { EditorMode, HistoryItem } from './types';
-
-const PRESETS = [
-  { id: 'anime', label: 'Anime Style', prompt: 'Turn the selection into a high-quality Studio Ghibli anime style character' },
-  { id: 'cyber', label: 'Cyberpunk', prompt: 'Give the selection a futuristic cyberpunk neon aesthetic with robotic details' },
-  { id: 'sketch', label: 'Sketch', prompt: 'Convert the selection into a detailed pencil sketch' },
-  { id: 'professional', label: 'Pro Photo', prompt: 'Enhance the selection with professional studio lighting and 8k resolution details' },
-  { id: 'clay', label: 'Claymation', prompt: 'Make the selection look like a 3D claymation figure' },
-];
 
 const App: React.FC = () => {
   const [mode, setMode] = useState<EditorMode>(EditorMode.IDLE);
@@ -47,33 +41,20 @@ const App: React.FC = () => {
     }
   };
 
-  const handleReferenceUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        setReferenceImage(ev.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleProcess = async (customPrompt?: string) => {
-    const finalPrompt = customPrompt || prompt;
-    if (!originalImage || (!finalPrompt.trim() && !referenceImage)) return;
-    
+  const handleProcess = async () => {
+    if (!originalImage || (!prompt.trim() && !referenceImage)) return;
     setMode(EditorMode.PROCESSING);
     setError(null);
     try {
-      const edited = await processImageEditing(originalImage, finalPrompt || "Modify selection using reference image", selectionMask, referenceImage);
+      const edited = await processImageEditing(originalImage, prompt, selectionMask, referenceImage);
       setResultImage(edited);
       setMode(EditorMode.RESULT);
       setHistory(prev => [{
         id: crypto.randomUUID(), originalImage, editedImage: edited,
-        prompt: finalPrompt || "Reference Image Transformation", timestamp: Date.now()
+        prompt: prompt || "Pink Magic Transformation", timestamp: Date.now()
       }, ...prev]);
     } catch (err: any) {
-      setError(err.message || "Transformation failed.");
+      setError(err.message || "Magic failed. Try again!");
       setMode(EditorMode.BRUSH);
     }
   };
@@ -88,242 +69,277 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F8F9FA] text-zinc-900 selection:bg-zinc-900 selection:text-white">
-      {/* Navbar */}
-      <nav className="h-20 flex items-center justify-between px-8 bg-white border-b border-zinc-100 sticky top-0 z-[100]">
-        <div className="flex items-center gap-4">
-          <div 
-            className="w-11 h-11 bg-zinc-900 rounded-2xl flex items-center justify-center text-white shadow-lg cursor-pointer hover:scale-105 active:scale-95 transition-all" 
-            onClick={handleReset}
-          >
-            <Wand2 size={20} />
+    <div className="min-h-screen flex flex-col bg-transparent text-zinc-800 font-sans selection:bg-[#ff4d8d] selection:text-white">
+      {/* Header */}
+      <nav className="h-16 flex items-center justify-between px-6 md:px-12 bg-white/40 backdrop-blur-xl border-b border-pink-50 sticky top-0 z-[100]">
+        <div className="flex items-center gap-8">
+          <div className="flex items-center gap-2 cursor-pointer group" onClick={handleReset}>
+            <div className="w-9 h-9 bg-[#ff4d8d] rounded-xl flex items-center justify-center text-white shadow-[0_4px_12px_rgba(255,77,141,0.3)] group-hover:scale-110 transition-transform duration-300">
+              <Sparkles size={18} />
+            </div>
+            <span className="text-xl font-extrabold tracking-tight text-zinc-900">Magic<span className="text-[#ff4d8d]">Studio</span></span>
           </div>
-          <div>
-            <h1 className="text-lg font-black tracking-tight leading-none uppercase">Studio</h1>
-            <p className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest mt-1">Multi-Modal Magic</p>
+          <div className="hidden md:flex items-center gap-6">
+            <button className="text-sm font-bold text-zinc-400 hover:text-[#ff4d8d] transition-colors">Features</button>
+            <button className="text-sm font-bold text-zinc-400 hover:text-[#ff4d8d] transition-colors">Showcase</button>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setIsSidebarOpen(true)} 
-            className="p-3 bg-zinc-50 hover:bg-zinc-100 rounded-2xl transition-colors border border-zinc-100"
-          >
-            <History size={18} className="text-zinc-500" />
+        <div className="flex items-center gap-4">
+          <div className="px-3 py-1 bg-green-50 text-green-600 text-[10px] font-black uppercase tracking-widest rounded-full border border-green-100">
+            Free Forever
+          </div>
+          <button onClick={() => setIsSidebarOpen(true)} className="p-2.5 text-pink-300 hover:text-[#ff4d8d] hover:bg-white/50 rounded-xl transition-all">
+            <History size={20} />
           </button>
-          {originalImage && (
-            <button 
-              onClick={handleReset} 
-              className="px-5 py-2.5 text-zinc-400 hover:text-zinc-900 font-bold text-xs uppercase tracking-widest"
-            >
-              Reset
-            </button>
-          )}
         </div>
       </nav>
 
-      <main className="flex-1 overflow-y-auto p-6 lg:p-12 flex flex-col items-center">
+      <main className="flex-1 flex flex-col">
         {mode === EditorMode.IDLE && (
-          <div className="w-full max-w-xl flex flex-col items-center justify-center min-h-[60vh] animate-in fade-in slide-in-from-bottom-4 duration-1000">
-            <div 
-              className="group relative w-full aspect-square border-2 border-dashed border-zinc-200 rounded-[3rem] bg-white hover:border-zinc-400 transition-all cursor-pointer flex flex-col items-center justify-center gap-6 shadow-sm hover:shadow-2xl" 
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <div className="w-20 h-20 bg-zinc-50 rounded-3xl flex items-center justify-center text-zinc-300 group-hover:scale-110 group-hover:bg-zinc-900 group-hover:text-white transition-all shadow-inner">
-                <Plus size={40} strokeWidth={1.5} />
+          <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+            {/* Left: Content */}
+            <div className="flex-1 flex flex-col justify-center px-6 md:px-24 py-12 space-y-8 animate-in fade-in slide-in-from-left duration-700 relative z-10">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/60 backdrop-blur-md text-[#ff4d8d] rounded-full text-xs font-black uppercase tracking-widest shadow-sm border border-pink-50">
+                <Heart size={12} fill="currentColor" /> 100% Free AI Editor
               </div>
-              <div className="text-center">
-                <h2 className="text-2xl font-black tracking-tight mb-1">Start your creation</h2>
-                <p className="text-sm font-medium text-zinc-400">Upload a photo to begin the magic</p>
+              <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-zinc-900 leading-[1.05]">
+                Magically edit <br/>your world in <span className="text-[#ff4d8d] relative">Pink.<span className="absolute -bottom-2 left-0 w-full h-2 bg-pink-100/60 -z-10"></span></span>
+              </h1>
+              <p className="text-lg text-zinc-400 max-w-lg leading-relaxed font-medium">
+                Our advanced AI lets you isolate any subject and transform it instantly. No subscriptions, no hidden fees. Just pure magic for everyone.
+              </p>
+              <div className="flex items-center gap-6">
+                 <div className="flex -space-x-3">
+                    {[1,2,3,4].map(i => (
+                      <div key={i} className="w-10 h-10 rounded-full border-2 border-white bg-pink-100 shadow-sm" />
+                    ))}
+                 </div>
+                 <p className="text-xs font-bold text-zinc-400 uppercase tracking-tighter">Joined by 10k+ Creators</p>
               </div>
-              <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*" />
+            </div>
+
+            {/* Right: Upload Section */}
+            <div className="flex-1 bg-white/20 backdrop-blur-sm flex items-center justify-center p-6 md:p-12 lg:rounded-l-[5rem] relative overflow-hidden border-l border-pink-50/20">
+              <div className="absolute top-20 right-20 w-32 h-32 bg-pink-200/20 rounded-full blur-3xl animate-pulse" />
+              <div className="absolute bottom-20 left-20 w-48 h-48 bg-pink-300/10 rounded-full blur-3xl animate-pulse delay-700" />
+              
+              <div className="w-full max-w-md bg-white/80 backdrop-blur-3xl p-10 rounded-[3rem] shadow-[0_32px_80px_rgba(255,77,141,0.08)] border border-white text-center relative z-10 animate-in zoom-in duration-1000">
+                <div 
+                  className="group relative w-full aspect-square border-2 border-dashed border-pink-100 rounded-[2.5rem] bg-pink-50/10 hover:border-[#ff4d8d] hover:bg-pink-50/30 transition-all cursor-pointer flex flex-col items-center justify-center gap-6" 
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-3 transition-all duration-500">
+                    <Upload size={32} className="text-[#ff4d8d]" />
+                  </div>
+                  <div>
+                    <button className="px-10 py-4 bg-[#ff4d8d] text-white rounded-2xl font-black text-lg shadow-[0_10px_25px_rgba(255,77,141,0.4)] hover:bg-[#ff3377] hover:-translate-y-1 transition-all active:scale-95 mb-3">
+                      Upload Photo
+                    </button>
+                    <p className="text-sm font-bold text-pink-300">Free, no account needed</p>
+                  </div>
+                  <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*" />
+                </div>
+                <div className="mt-10">
+                  <p className="text-[10px] font-black text-pink-200 uppercase tracking-[0.2em] mb-4">Try a Sample</p>
+                  <div className="flex justify-center gap-4">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className="w-14 h-14 bg-white/40 backdrop-blur-md rounded-2xl cursor-pointer hover:scale-110 hover:shadow-md transition-all border border-pink-100" />
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
 
         {mode === EditorMode.BRUSH && originalImage && (
-          <div className="w-full max-w-4xl flex flex-col gap-10 animate-in fade-in duration-700 pb-52">
-            <div className="flex flex-col items-center gap-2">
-              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.3em]">Step 01</span>
-              <h2 className="text-3xl font-black tracking-tight text-center">Circle the target</h2>
+          <div className="flex-1 bg-transparent p-4 md:p-8 flex flex-col items-center relative animate-in fade-in duration-500">
+            <div className="w-full max-w-4xl bg-white p-3 rounded-[2.5rem] shadow-[0_40px_100px_rgba(255,77,141,0.1)] overflow-hidden relative border border-pink-50">
+              <DrawingCanvas imageUrl={originalImage} onSelectionComplete={setSelectionMask} />
+              
+              {/* Floating Toolbar */}
+              <div className="absolute top-8 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-2xl px-6 py-2.5 rounded-full shadow-2xl border border-pink-100 flex items-center gap-4 z-50">
+                 <div className="flex items-center gap-4 px-2">
+                    <button onClick={handleReset} className="p-2 text-pink-200 hover:text-[#ff4d8d] transition-all hover:scale-110"><RotateCcw size={20}/></button>
+                    <button className="p-2 text-pink-200 hover:text-[#ff4d8d] transition-all hover:scale-110"><Settings size={20}/></button>
+                 </div>
+              </div>
             </div>
-            
-            <DrawingCanvas imageUrl={originalImage} onSelectionComplete={setSelectionMask} />
 
-            <div className="fixed bottom-10 left-1/2 -translate-x-1/2 w-full max-w-4xl px-6 z-[100]">
-              <div className="bg-white/80 backdrop-blur-3xl p-6 rounded-[2.5rem] border border-zinc-100 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.12)] flex flex-col gap-5">
-                
-                {/* Reference & Presets Row */}
-                <div className="flex items-center gap-4 overflow-x-auto no-scrollbar">
-                  {/* Reference Image Slot */}
-                  <div className="flex-shrink-0">
-                    {referenceImage ? (
-                      <div className="relative w-16 h-16 rounded-2xl overflow-hidden border-2 border-zinc-900 shadow-lg group">
-                        <img src={referenceImage} className="w-full h-full object-cover" />
-                        <button 
-                          onClick={() => setReferenceImage(null)}
-                          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity"
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-                    ) : (
-                      <button 
-                        onClick={() => referenceInputRef.current?.click()}
-                        className="w-16 h-16 bg-zinc-50 border-2 border-dashed border-zinc-200 rounded-2xl flex flex-col items-center justify-center text-zinc-400 hover:border-zinc-400 hover:text-zinc-600 transition-all active:scale-95"
-                      >
-                        <ImagePlus size={20} />
-                        <span className="text-[8px] font-black uppercase tracking-tighter mt-1">Ref</span>
-                        <input type="file" ref={referenceInputRef} onChange={handleReferenceUpload} className="hidden" accept="image/*" />
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="h-10 w-[1px] bg-zinc-100 mx-1 flex-shrink-0" />
-
-                  {/* Presets Bar */}
-                  <div className="flex gap-2 overflow-x-auto no-scrollbar">
-                    {PRESETS.map(p => (
-                      <button 
-                        key={p.id}
-                        onClick={() => { setPrompt(p.prompt); handleProcess(p.prompt); }}
-                        className="whitespace-nowrap px-4 py-2 bg-zinc-50 hover:bg-zinc-900 hover:text-white border border-zinc-100 rounded-xl text-xs font-bold transition-all active:scale-95"
-                      >
-                        {p.label}
-                      </button>
-                    ))}
-                  </div>
+            {/* Prompt Area */}
+            <div className="fixed bottom-10 left-1/2 -translate-x-1/2 w-full max-w-2xl px-6 animate-in slide-in-from-bottom-10 duration-700">
+              <div className="bg-white/90 backdrop-blur-3xl p-5 rounded-[2.5rem] shadow-[0_32px_64px_rgba(255,77,141,0.15)] border border-pink-50 flex items-center gap-5">
+                <div className="flex-shrink-0 relative group">
+                  {referenceImage ? (
+                    <div className="w-14 h-14 rounded-2xl overflow-hidden shadow-md relative ring-4 ring-pink-50">
+                       <img src={referenceImage} className="w-full h-full object-cover" />
+                       <button onClick={() => setReferenceImage(null)} className="absolute inset-0 bg-pink-500/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity"><X size={16}/></button>
+                    </div>
+                  ) : (
+                    <button onClick={() => referenceInputRef.current?.click()} className="w-14 h-14 bg-pink-50 rounded-2xl flex items-center justify-center text-[#ff4d8d] hover:bg-[#ff4d8d] hover:text-white transition-all shadow-inner">
+                      <ImagePlus size={24} />
+                      <input type="file" ref={referenceInputRef} onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) {
+                          const r = new FileReader();
+                          r.onload = (ev) => setReferenceImage(ev.target?.result as string);
+                          r.readAsDataURL(f);
+                        }
+                      }} className="hidden" accept="image/*" />
+                    </button>
+                  )}
                 </div>
-
-                <div className="flex flex-col md:flex-row gap-4">
-                  <input 
-                    type="text" 
-                    value={prompt} 
-                    onChange={(e) => setPrompt(e.target.value)} 
-                    placeholder={referenceImage ? "Describe how to use the reference..." : "Describe the change..."} 
-                    className="flex-1 bg-zinc-50 rounded-2xl px-6 py-4 font-bold text-lg focus:outline-none placeholder:text-zinc-300" 
-                    onKeyDown={(e) => e.key === 'Enter' && handleProcess()}
-                  />
-                  <button 
-                    onClick={() => handleProcess()} 
-                    disabled={!prompt.trim() && !referenceImage}
-                    className="px-10 py-4 bg-zinc-900 text-white rounded-2xl font-black shadow-xl flex items-center justify-center gap-3 disabled:opacity-20 transition-all hover:bg-black active:scale-95 group"
-                  >
-                    <Sparkles size={18} className="group-hover:animate-pulse" />
-                    Transform
-                  </button>
-                </div>
+                <input 
+                  type="text" 
+                  value={prompt} 
+                  onChange={(e) => setPrompt(e.target.value)} 
+                  placeholder="What should we change? ✨" 
+                  className="flex-1 bg-transparent text-lg font-bold focus:outline-none placeholder:text-pink-200 px-2 text-zinc-800"
+                  onKeyDown={(e) => e.key === 'Enter' && handleProcess()}
+                />
+                <button 
+                  onClick={handleProcess} 
+                  disabled={!prompt.trim() && !referenceImage}
+                  className="px-8 py-4 bg-[#ff4d8d] text-white rounded-2xl font-black shadow-lg flex items-center gap-3 hover:bg-[#ff3377] hover:scale-105 active:scale-95 disabled:opacity-30 disabled:scale-100 transition-all group"
+                >
+                  <Sparkles size={20} className="group-hover:animate-pulse" />
+                  Apply
+                </button>
               </div>
             </div>
           </div>
         )}
 
         {mode === EditorMode.PROCESSING && (
-          <div className="flex flex-col items-center justify-center min-h-[50vh] gap-10">
-            <div className="relative w-36 h-36 rounded-full border-[8px] border-zinc-50 border-t-zinc-900 animate-spin" />
-            <div className="text-center">
-              <h2 className="text-4xl font-black tracking-tight mb-2">Creating...</h2>
-              <p className="text-zinc-400 font-bold uppercase tracking-[0.2em] text-[10px]">Processing Multi-Modal Inputs</p>
+          <div className="flex-1 flex flex-col items-center justify-center bg-transparent gap-10 animate-in fade-in duration-500">
+            <div className="w-32 h-32 relative">
+              <div className="absolute inset-0 border-[6px] border-white/40 rounded-full" />
+              <div className="absolute inset-0 border-[6px] border-[#ff4d8d] border-t-transparent rounded-full animate-spin" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                 <Heart size={32} className="text-[#ff4d8d] animate-bounce" fill="currentColor" />
+              </div>
+            </div>
+            <div className="text-center space-y-2">
+              <h2 className="text-3xl font-black text-zinc-900 tracking-tight">Sprinkling some magic...</h2>
+              <p className="text-pink-400 font-bold uppercase tracking-widest text-xs">AI is perfecting your vision</p>
             </div>
           </div>
         )}
 
         {mode === EditorMode.RESULT && resultImage && (
-          <div className="w-full max-w-5xl flex flex-col items-center gap-10 animate-in zoom-in-95 duration-700 pb-20">
-            <div className="relative rounded-[3rem] overflow-hidden border-8 border-white shadow-[0_40px_80px_-20px_rgba(0,0,0,0.15)] bg-white group select-none">
-              <img src={isComparing ? originalImage! : resultImage} alt="Result" className="w-full h-auto" />
-              
-              <div className="absolute top-8 right-8 flex flex-col gap-3">
-                <button 
-                  onMouseDown={() => setIsComparing(true)}
-                  onMouseUp={() => setIsComparing(false)}
-                  onMouseLeave={() => setIsComparing(false)}
-                  onTouchStart={() => setIsComparing(true)}
-                  onTouchEnd={() => setIsComparing(false)}
-                  className="p-4 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl text-zinc-900 active:scale-90 transition-all border border-zinc-100"
-                  title="Hold to see original"
-                >
-                  <Eye size={20} />
-                </button>
-                <button 
-                  onClick={() => {const l=document.createElement('a');l.href=resultImage;l.download='magic-edit.png';l.click();}} 
-                  className="p-4 bg-white/90 backdrop-blur-md rounded-2xl shadow-xl text-zinc-900 hover:bg-zinc-900 hover:text-white transition-all border border-zinc-100"
-                >
-                  <Download size={20} />
-                </button>
+          <div className="flex-1 flex flex-col md:flex-row bg-transparent overflow-hidden animate-in fade-in duration-700">
+            {/* Main Result Display */}
+            <div className="flex-[3] p-6 md:p-12 flex items-center justify-center overflow-auto relative">
+              <div className="relative bg-white/60 backdrop-blur-xl p-5 rounded-[3rem] shadow-[0_50px_100px_rgba(255,77,141,0.12)] max-w-4xl w-full group border border-white">
+                 {/* Checkerboard with pink tint */}
+                 <div className="absolute inset-5 rounded-[2rem] opacity-[0.05] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#ff4d8d 15%, transparent 15%), radial-gradient(#ff4d8d 15%, transparent 15%)', backgroundPosition: '0 0, 10px 10px', backgroundSize: '20px 20px' }} />
+                 <img src={isComparing ? originalImage! : resultImage} alt="Result" className="w-full h-auto relative rounded-[2rem] shadow-sm transition-opacity duration-300" />
+                 
+                 <div className="absolute top-10 right-10 flex gap-3">
+                    <button 
+                      onMouseDown={() => setIsComparing(true)} onMouseUp={() => setIsComparing(false)} onMouseLeave={() => setIsComparing(false)}
+                      className="p-4 bg-white/95 backdrop-blur rounded-2xl shadow-xl text-[#ff4d8d] border border-pink-50 hover:scale-110 active:scale-95 transition-all"
+                    >
+                      <Eye size={22} />
+                    </button>
+                 </div>
               </div>
-              
-              {isComparing && (
-                <div className="absolute inset-0 bg-black/10 flex items-center justify-center pointer-events-none">
-                  <span className="px-6 py-2 bg-black/60 backdrop-blur rounded-full text-white font-black text-xs uppercase tracking-widest">Original Image</span>
-                </div>
-              )}
             </div>
 
-            <div className="w-full max-w-3xl bg-white p-10 rounded-[3rem] border border-zinc-100 shadow-xl flex flex-col items-center gap-8">
-              <div className="text-center">
-                <span className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest">Transformation</span>
-                <p className="text-2xl font-black italic mt-2 text-zinc-800 leading-tight">"{prompt || 'Visual Reference Fusion'}"</p>
+            {/* Right Side Control Panel */}
+            <div className="flex-1 bg-white/80 backdrop-blur-3xl border-l border-pink-50 p-10 flex flex-col gap-10 overflow-y-auto custom-scrollbar animate-in slide-in-from-right duration-500">
+              <div className="flex justify-between items-center">
+                 <div className="flex bg-pink-50/50 p-1.5 rounded-2xl">
+                    <button 
+                      className={`px-5 py-2.5 text-xs font-black rounded-xl transition-all ${!isComparing ? 'bg-white text-[#ff4d8d] shadow-sm' : 'text-pink-300'}`}
+                      onClick={() => setIsComparing(false)}
+                    >Magic</button>
+                    <button 
+                      className={`px-5 py-2.5 text-xs font-black rounded-xl transition-all ${isComparing ? 'bg-white text-[#ff4d8d] shadow-sm' : 'text-pink-300'}`}
+                      onClick={() => setIsComparing(true)}
+                    >Original</button>
+                 </div>
+                 <button onClick={handleReset} className="p-3 text-pink-200 hover:text-red-400 hover:bg-red-50 rounded-2xl transition-all"><RotateCcw size={20}/></button>
               </div>
-              
-              <div className="w-full grid md:grid-cols-2 gap-4">
-                <button 
-                  onClick={() => setMode(EditorMode.BRUSH)} 
-                  className="py-5 bg-zinc-50 hover:bg-zinc-100 rounded-[1.5rem] font-black flex items-center justify-center gap-3 transition-colors"
-                >
-                  <ArrowLeft size={18} />
-                  Try Again
-                </button>
-                <button 
-                  onClick={() => {setOriginalImage(resultImage); setMode(EditorMode.BRUSH); setPrompt(''); setSelectionMask(null); setReferenceImage(null);}} 
-                  className="py-5 bg-zinc-900 hover:bg-black text-white rounded-[1.5rem] font-black flex items-center justify-center gap-3 shadow-xl transition-all active:scale-95"
-                >
-                  Edit Result
-                  <ArrowRight size={18} />
-                </button>
+
+              <div className="space-y-5">
+                 <button 
+                  onClick={() => {const l=document.createElement('a');l.href=resultImage!;l.download='magic-edit.png';l.click();}}
+                  className="w-full py-5 bg-[#ff4d8d] text-white rounded-[2rem] font-black flex items-center justify-center gap-3 shadow-[0_15px_30px_rgba(255,77,141,0.3)] hover:bg-[#ff3377] hover:-translate-y-1 transition-all group"
+                 >
+                   Download Art
+                   <Download size={20} className="group-hover:translate-y-0.5 transition-transform" />
+                 </button>
+                 <button 
+                  onClick={() => {const l=document.createElement('a');l.href=resultImage!;l.download='magic-hd.png';l.click();}}
+                  className="w-full py-5 bg-zinc-900 text-white rounded-[2rem] font-black flex items-center justify-center gap-3 hover:bg-black transition-all hover:-translate-y-1 shadow-xl group"
+                 >
+                   Ultra HD (4K)
+                   <CheckCircle2 size={16} className="text-green-400 group-hover:scale-110 transition-transform" />
+                 </button>
+                 <div className="text-center">
+                   <span className="text-[10px] font-black text-green-500 uppercase tracking-widest bg-green-50 px-3 py-1 rounded-full">Unlimited Free HD</span>
+                 </div>
+              </div>
+
+              <div className="pt-10 border-t border-pink-50">
+                 <h3 className="text-[10px] font-black text-pink-200 uppercase tracking-[0.2em] mb-5">Transformation Log</h3>
+                 <div className="bg-white/60 p-5 rounded-[2rem] border border-pink-50 relative group">
+                    <p className="text-sm font-bold italic text-zinc-600 leading-relaxed pr-2">"{prompt || 'Pink enhancement applied.'}"</p>
+                    <div className="absolute -top-3 -right-3 w-8 h-8 bg-[#ff4d8d] rounded-full flex items-center justify-center text-white shadow-lg rotate-12 group-hover:rotate-0 transition-transform">
+                      <Sparkles size={14} />
+                    </div>
+                 </div>
+                 <button 
+                  onClick={() => {setOriginalImage(resultImage); setMode(EditorMode.BRUSH); setPrompt(''); setSelectionMask(null);}}
+                  className="w-full mt-6 py-4 border-2 border-white/60 hover:border-[#ff4d8d] hover:text-[#ff4d8d] text-pink-300 rounded-[2rem] font-black text-sm transition-all flex items-center justify-center gap-3 active:scale-95"
+                 >
+                   Layer another edit <Maximize size={16} />
+                 </button>
+              </div>
+
+              <div className="mt-auto p-5 bg-white/40 rounded-[2.5rem] border border-pink-100 flex items-start gap-4">
+                 <div className="w-10 h-10 bg-white rounded-2xl flex items-center justify-center text-[#ff4d8d] shadow-sm flex-shrink-0">
+                    <Info size={18} />
+                 </div>
+                 <div className="space-y-1">
+                    <p className="text-xs font-black text-zinc-900">Magic Tip</p>
+                    <p className="text-[10px] font-bold text-zinc-400 leading-normal">Everything here is completely free. Use as much as you like!</p>
+                 </div>
               </div>
             </div>
           </div>
         )}
       </main>
 
-      {/* Error Message */}
-      {error && (
-        <div className="fixed bottom-6 left-6 z-[200] bg-red-500 text-white px-6 py-4 rounded-2xl shadow-2xl font-bold text-sm animate-in slide-in-from-left">
-          {error}
-        </div>
-      )}
-
-      {/* Sidebar Gallery */}
+      {/* History Sidebar */}
       {isSidebarOpen && (
         <>
-          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[110]" onClick={() => setIsSidebarOpen(false)} />
-          <aside className="w-[400px] max-w-full bg-white fixed inset-y-0 right-0 z-[120] shadow-[-20px_0_60px_rgba(0,0,0,0.1)] flex flex-col animate-in slide-in-from-right duration-500">
-            <div className="p-8 border-b flex items-center justify-between">
-              <h2 className="text-xl font-black tracking-tight flex items-center gap-3">
-                <History className="text-zinc-400" />
-                Your Magic
-              </h2>
-              <button onClick={() => setIsSidebarOpen(false)} className="p-2 hover:bg-zinc-50 rounded-xl transition-colors"><ChevronRight size={28}/></button>
+          <div className="fixed inset-0 bg-pink-100/10 backdrop-blur-md z-[110]" onClick={() => setIsSidebarOpen(false)} />
+          <aside className="w-[420px] max-w-full bg-white/90 backdrop-blur-2xl fixed inset-y-0 right-0 z-[120] shadow-[0_0_100px_rgba(255,77,141,0.1)] flex flex-col animate-in slide-in-from-right duration-500 rounded-l-[3rem] border-l border-white">
+            <div className="p-10 border-b border-pink-50 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-extrabold text-zinc-900">Your Gallery</h2>
+                <p className="text-[10px] font-black text-pink-300 uppercase tracking-widest mt-1">Free Storage</p>
+              </div>
+              <button onClick={() => setIsSidebarOpen(false)} className="p-3 hover:bg-pink-50 rounded-2xl transition-colors text-pink-200 hover:text-[#ff4d8d]"><X size={28}/></button>
             </div>
-            <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar">
               {history.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center px-6">
-                  <div className="w-20 h-20 bg-zinc-50 rounded-[2rem] flex items-center justify-center text-zinc-200 mb-6">
-                    <ImageIcon size={32} />
-                  </div>
-                  <p className="text-zinc-400 font-bold leading-relaxed">No history yet.<br/>Upload a photo to begin!</p>
+                <div className="h-full flex flex-col items-center justify-center text-center opacity-20 space-y-4">
+                  <ImageIcon size={64} className="text-pink-300" strokeWidth={1} />
+                  <p className="font-black uppercase tracking-widest text-xs">Awaiting your first creation</p>
                 </div>
               ) : (
                 history.map(item => (
-                  <div 
-                    key={item.id} 
-                    className="group relative cursor-pointer space-y-3" 
-                    onClick={() => {setOriginalImage(item.originalImage); setResultImage(item.editedImage); setPrompt(item.prompt); setMode(EditorMode.RESULT); setIsSidebarOpen(false);}}
-                  >
-                    <div className="aspect-[4/5] rounded-[2rem] overflow-hidden border border-zinc-100 shadow-sm group-hover:shadow-2xl transition-all duration-500 group-hover:-translate-y-1">
+                  <div key={item.id} className="group cursor-pointer space-y-4" onClick={() => {setOriginalImage(item.originalImage); setResultImage(item.editedImage); setPrompt(item.prompt); setMode(EditorMode.RESULT); setIsSidebarOpen(false);}}>
+                    <div className="aspect-[4/3] rounded-[2.5rem] overflow-hidden border-2 border-white shadow-sm group-hover:shadow-xl group-hover:scale-[1.02] transition-all duration-300">
                       <img src={item.editedImage} className="w-full h-full object-cover" />
                     </div>
-                    <p className="text-sm font-bold italic text-zinc-800 line-clamp-1">"{item.prompt}"</p>
+                    <div className="flex justify-between items-center px-2">
+                       <p className="text-xs font-bold italic text-zinc-500 line-clamp-1">"{item.prompt}"</p>
+                       <span className="text-[10px] font-black text-pink-200 uppercase">{new Date(item.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    </div>
                   </div>
                 ))
               )}
@@ -332,12 +348,17 @@ const App: React.FC = () => {
         </>
       )}
 
-      <footer className="h-14 flex items-center justify-center border-t border-zinc-100 bg-white">
-          <p className="text-[9px] font-black uppercase tracking-[0.5em] text-zinc-300">
-            Multi-Modal AI Engine &bull; Magic Studio
-          </p>
-      </footer>
+      {error && (
+        <div className="fixed bottom-8 right-8 z-[200] bg-white text-zinc-900 px-8 py-5 rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.1)] border-l-4 border-[#ff4d8d] font-bold text-sm flex items-center gap-4 animate-in slide-in-from-right">
+          <div className="w-8 h-8 bg-red-50 rounded-full flex items-center justify-center text-red-500">
+            <Info size={18} />
+          </div>
+          <span className="max-w-xs">{error}</span>
+          <button onClick={() => setError(null)} className="ml-4 p-2 hover:bg-zinc-50 rounded-lg text-zinc-300 hover:text-zinc-900"><X size={16}/></button>
+        </div>
+      )}
     </div>
   );
 };
+
 export default App;

@@ -27,18 +27,18 @@ export async function processImageEditing(
   if (maskBase64) {
     const maskImage = extractData(maskBase64);
     parts.push({ inlineData: maskImage });
-    instruction += `The first image is the original. The second image is a mask where white is the selection. Only modify the area indicated by the white mask. `;
+    instruction += `The second image is a mask. Only modify the area indicated by white. `;
   } else {
-    instruction += `Automatically detect the subject and apply changes naturally. `;
+    instruction += `Automatically detect the main subject and apply changes naturally. `;
   }
 
   if (referenceImageBase64) {
     const refImage = extractData(referenceImageBase64);
     parts.push({ inlineData: refImage });
-    instruction += `Use the additional reference image provided as visual guidance/style/content for the modification. Ensure the result looks photorealistic and naturally integrated into the original scene. `;
+    instruction += `Ensure the result matches the style and details from the provided reference image. `;
   }
 
-  parts.push({ text: instruction });
+  parts.push({ text: instruction + " Maintain photorealism and natural integration." });
 
   try {
     const response = await ai.models.generateContent({
